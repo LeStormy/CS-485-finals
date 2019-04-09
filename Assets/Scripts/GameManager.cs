@@ -23,7 +23,7 @@ using UnityEngine.SceneManagement;
         private GameObject camera;
 
 
-        private const int nbLevels = 3;
+        private const int nbLevels = 2;
 
         //Awake is always called before any Start functions
         void Awake()
@@ -109,11 +109,10 @@ using UnityEngine.SceneManagement;
 
         private void LoadNextLevel() {
             isTransiting = false;
-            SoundManager.instance.PlayMusic();
             Debug.Log("LoadNextLevel" + level);
             if(level + 1 > nbLevels) {
                 // Go back end credirs
-                SceneManager.LoadScene(6);
+                SceneManager.LoadScene(5);
             } else {
                 //Add one to our level number.
                 level++;
