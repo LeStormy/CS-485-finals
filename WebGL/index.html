@@ -1,16 +1,36 @@
 <!DOCTYPE html>
 <html lang="en-us">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Unity WebGL Player | CS485 - Rings</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="shortcut icon" href="TemplateData/favicon.ico" />
+    <link rel="stylesheet" href="TemplateData/style.css" />
     <script src="TemplateData/UnityProgress.js"></script>
     <script src="Build/UnityLoader.js"></script>
     <script>
-      var gameInstance = UnityLoader.instantiate("gameContainer", "Build/WebGL.json", {onProgress: UnityProgress});
+      var gameInstance = UnityLoader.instantiate(
+        "gameContainer",
+        "Build/WebGL.json",
+        { onProgress: UnityProgress }
+      );
     </script>
+    <style>
+      #g-container {
+        display: grid;
+        grid-template-columns: auto auto auto;
+        background-color: #2196f3;
+        padding: 10px;
+      }
+
+      #g-item {
+        background-color: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0, 0, 0, 0.8);
+        padding: 20px;
+        font-size: 30px;
+        text-align: center;
+      }
+    </style>
   </head>
   <body>
     <div class="webgl-content">
@@ -19,6 +39,18 @@
         <div class="webgl-logo"></div>
         <div class="fullscreen" onclick="gameInstance.SetFullscreen(1)"></div>
         <div class="title">CS485 - Rings</div>
+      </div>
+    </div>
+    <div style="height: 1080px;"></div>
+    <div class="grid-container" id="g-container">
+      <div class="grid-item" id="g-item">
+        <div><img src="rings1.PNG" /></div>
+        <div class="grid-item" id="g-item">
+          <div><img src="rings2.PNG" /></div>
+        </div>
+        <div class="grid-item" id="g-item">
+          <div><img src="rings3.PNG" /></div>
+        </div>
       </div>
     </div>
   </body>
