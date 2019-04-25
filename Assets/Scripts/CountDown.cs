@@ -9,7 +9,7 @@ public class CountDown : Timer {
   private BlinkingText blinkingText;
   private bool isBlinking;
 
-  void Start () {
+  protected override void Start () {
     blinkingText = GetComponent<BlinkingText>();
     isBlinking = false;
 
@@ -20,7 +20,7 @@ public class CountDown : Timer {
   }
 
   // Update is called once per frame
-  public override void Update () {
+  protected override void Update () {
     if(started) {
       float t = timeLeft - (Time.time - startTimer);
 
@@ -45,5 +45,24 @@ public class CountDown : Timer {
 
   public void AddTime(float seconds) {
     timeLeft += seconds;
+    if(seconds > 0) {
+      GotBonus();
+    } else {
+      GotMalus();
+    }
+  }
+
+  private void GotMalus() {
+    timerText.color = Color.red;
+    Invoke("WhiteText", 2.0f);
+  }
+
+  private void GotBonus() {
+    timerText.color = Color.green;
+    Invoke("WhiteText", 2.0f);
+  }
+
+  private void WhiteText() {
+    timerText.color = Color.white;
   }
 }

@@ -20,10 +20,23 @@ using UnityEngine.SceneManagement;
         private CountDown myTimer;
         private LayerTypeEnum currentLayerType;
         private GameObject playerRef;
-        private GameObject camera;
+        private int nbRetry = 0;
+        private GamePersistingData gamePersistingDataScript;
 
 
-        private const int nbLevels = 2;
+        private const int nbLevels = 3;
+        private const float timerStep = 5f;
+
+        public int Level {
+            get
+            {
+                return instance.level;
+            }
+            set
+            {
+                instance.level = value;
+            }
+        }
 
         //Awake is always called before any Start functions
         void Awake()
@@ -43,17 +56,29 @@ using UnityEngine.SceneManagement;
             //boardScript = GetComponent<BoardManager>();
 
             // UNCOMMENT THOSE TWO LINES TO TEST YOUR SCENE AS STANDALONE
-            //playerRef = GameObject.FindGameObjectsWithTag("Player")[0];
-            //InitGame();
+            gamePersistingDataScript = GetComponent<GamePersistingData>();
+            playerRef = GameObject.FindGameObjectsWithTag("Player")[0];
+            InitGame();
+        }
+
+        void OnEnable()
+        {
+            //Tell our 'OnLevelFinishedLoading' function to start listening for a scene change as soon as this script is enabled.
+            SceneManager.sceneLoaded += OnLevelFinishedLoading;
+        }
+
+        void OnDisable()
+        {
+            //Tell our 'OnLevelFinishedLoading' function to stop listening for a scene change as soon as this script is disabled. Remember to always have an unsubscription for every delegate you subscribe to!
+            SceneManager.sceneLoaded -= OnLevelFinishedLoading;
         }
 
         //This is called each time a scene is loaded.
-        void OnLevelWasLoaded(int index)
+        void  OnLevelFinishedLoading(Scene scene, LoadSceneMode mode)//OnLevelWasLoaded(int index)
         {
             // hardcoded index about credit and main menu
-            if(index != 0 || index != 6) {
+            if(scene.buildIndex != 0 && scene.buildIndex != 6) {
                 playerRef = GameObject.FindGameObjectsWithTag("Player")[0];
-                camera = GameObject.FindGameObjectWithTag("MainCamera");
                 invertedInputCanvas = GameObject.Find("InputGlitchInfo");
                 //Call InitGame to initialize our level.
                 InitGame();
@@ -73,7 +98,9 @@ using UnityEngine.SceneManagement;
             beforeStartCanvas = GameObject.Find("BeforeStartCanvas");
             invertedInputCanvas = GameObject.Find("InputGlitchInfo");
 
-            Invoke("HideBeforeStartCanvas", levelStartDelay);
+            float startDelay = (nbRetry >= 1) ? 0.01f : levelStartDelay;
+
+            Invoke("HideBeforeStartCanvas", startDelay);
             Invoke("HideInputGlitchInfo", 0.001f);
 
             playerRef.SetActive(true);
@@ -109,11 +136,12 @@ using UnityEngine.SceneManagement;
 
         private void LoadNextLevel() {
             isTransiting = false;
-            Debug.Log("LoadNextLevel" + level);
+            SoundManager.instance.PlayMusic();
             if(level + 1 > nbLevels) {
-                // Go back end credirs
-                SceneManager.LoadScene(5);
+                // Go back end credits
+                SceneManager.LoadScene(6);
             } else {
+                gamePersistingDataScript.Save();
                 //Add one to our level number.
                 level++;
                 //hardcoded 2 represent the nb scenes before the first level
@@ -125,6 +153,7 @@ using UnityEngine.SceneManagement;
         public void Finished(string message) {
             if(!doingSetup) {
                 doingSetup = true;
+                nbRetry = 0;
                 SoundManager.instance.StopMusic();
                 SoundManager.instance.PlaySingle(winSound);
                 myTimer.StopTimer();
@@ -139,14 +168,20 @@ using UnityEngine.SceneManagement;
                 SoundManager.instance.StopMusic();
                 SoundManager.instance.PlaySingle(loseSound);
                 //invertedInputCanvas.SetActive(true);
+                myTimer.StopTimer();
                 playerRef.SetActive(false);
                 doingSetup = true;
+                nbRetry = nbRetry + 1;
                 Invoke("ReloadLevel", 3f);
             }
         }
 
-        public void AddTime(float value) {
-            myTimer.AddTime(value);
+        public void AddTime() {
+            myTimer.AddTime(timerStep);
+        }
+
+        public void ReduceTime() {
+            myTimer.AddTime(-timerStep);
         }
 
         public void InvertedInput(float timer) {

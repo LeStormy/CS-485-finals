@@ -2452,7 +2452,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Defrag
+  m_Text: Rings
 --- !u!222 &1031905539
 CanvasRenderer:
   m_ObjectHideFlags: 0
