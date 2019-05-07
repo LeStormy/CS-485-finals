@@ -19,8 +19,8 @@ public class Player : MoveableObject {
     protected SpriteRenderer spriteRenderer;
     protected Rigidbody2D rb2D;
     protected CircleCollider2D footCollider;
-    protected CapsuleCollider2D bodyColliderVer;
-    protected CapsuleCollider2D bodyColliderHor;
+    public CapsuleCollider2D bodyColliderVer;
+    public CapsuleCollider2D bodyColliderHor;
     public int animeState = 0; //IDLE /RUN /JUMP /SLIDE /PUNCH
     protected float distToCenter = 0;
     protected float atkTimer = 0f;
@@ -32,19 +32,13 @@ public class Player : MoveableObject {
     private bool slideButton = false;
     private bool jumpButton = false;
     private bool punchButton = false;
+    private float jumpVelocity = 0.0f;
 
     protected virtual void Awake() {
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         rb2D = gameObject.GetComponent<Rigidbody2D>();
         footCollider = this.GetComponent<CircleCollider2D>();
-        CapsuleCollider2D[] colliders = this.GetComponents<CapsuleCollider2D>();
-        foreach(CapsuleCollider2D cap in colliders) {
-            if (cap.direction.Equals(CapsuleDirection2D.Horizontal))
-                bodyColliderHor = cap;
-            else
-                bodyColliderVer = cap;
-        }
     }
 
     void Start () {
@@ -54,13 +48,18 @@ public class Player : MoveableObject {
     void FixedUpdate() {
         float newDist = (Mathf.Round(Vector3.Distance(center.transform.position, transform.position) * 10)) / 10f;
         distToCenter = newDist;
+        if (!CanMove()) {
+            return;
+        }
 
-        if (!CanMove() || teleporting) {
+        if(teleporting) {
+            //to keep colission during the teleportation with the new layer
+            rb2D.velocity = rb2D.velocity / 1.5f;
             return;
         }
 
         float move = 0;
-        #if UNITY_STANDALONE || UNITY_WEBPLAYER
+        #if UNITY_STANDALONE || UNITY_WEBGL
             move = Input.GetAxis("Horizontal");
         #elif UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
             move = (float) directionButton;
@@ -70,17 +69,24 @@ public class Player : MoveableObject {
         }
 
         Vector3 forceDirection = transform.position - center.transform.position;
-
         rb2D.velocity = rb2D.velocity / 1.5f;
 
-        if (move != 0f && Input.GetAxis("Vertical") >= -0.8f)
+        #if UNITY_STANDALONE || UNITY_WEBGL
+            if (move != 0f && Input.GetAxis("Vertical") >= -0.8f)
+         #elif UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
+            if(move != 0f ) //&& slideButton)
+         #endif
         {
             float moveX = move * moveSpeed * Time.deltaTime;
             Vector3 addX = transform.right * moveX;
             rb2D.AddForce(addX);
         }
-
-        if (Input.GetAxisRaw("Jump") != 0 && jumpTimer <= 0f) {
+        #if UNITY_STANDALONE || UNITY_WEBGL
+           if (Input.GetAxisRaw("Jump") != 0 && jumpTimer <= 0f)
+        #elif UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
+            if (jumpButton && jumpTimer <= 0f)
+        #endif
+        {
             grounded = false;
             jumpTimer = jumpBaseTimer;
             SwitchAnimeState(2);
@@ -88,21 +94,35 @@ public class Player : MoveableObject {
         }
 
         rb2D.AddForce(forceDirection.normalized * 1f * Time.fixedDeltaTime);
+
+
         if (jumpTimer > 0f) {
             jumpTimer -= Time.deltaTime;
-            if (Input.GetButton("Jump")) {
+            #if UNITY_STANDALONE || UNITY_WEBGL
+               if (Input.GetButton("Jump"))
+            #elif UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
+                if(jumpButton)
+            #endif
+            {
                 grounded = false;
                 rb2D.AddForce(forceDirection.normalized * (jumpSpeed * (jumpTimer / jumpBaseTimer)) * Time.fixedDeltaTime);
             }
         }
 
+
         if (move > 0 && !facingRight || move < 0 && facingRight) {
             Flip();
         }
 
-        if (Input.GetButtonDown("Fire3") && atkTimer <= 0f) {
-            atkTimer = 0.3f;
-        }
+        #if UNITY_STANDALONE || UNITY_WEBGL
+           if (Input.GetButtonDown("Fire3") && atkTimer <= 0f) {
+               atkTimer = 0.3f;
+           }
+        #elif UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
+            if (punchButton && atkTimer <= 0f) {
+                atkTimer = 0.3f;
+            }
+        #endif
 
         if (atkTimer >= 0f)
             atkTimer -= Time.deltaTime;
@@ -111,10 +131,20 @@ public class Player : MoveableObject {
             SwitchAnimeState(4);
         else if (jumpTimer > 0)
             SwitchAnimeState(2);
+        #if UNITY_STANDALONE || UNITY_WEBGL
         else if (Input.GetAxisRaw("Vertical") < 0f && grounded)
             SwitchAnimeState(3);
+        #elif UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
+        else if(slideButton && grounded)
+            SwitchAnimeState(3);
+        #endif
+        #if UNITY_STANDALONE || UNITY_WEBGL
         else if (Input.GetAxisRaw("Horizontal") == 0f)
+           SwitchAnimeState(0);
+        #elif UNITY_IOS || UNITY_ANDROID || UNITY_WP8 || UNITY_IPHONE
+        else if (directionButton == 0)
             SwitchAnimeState(0);
+        #endif
         else
             SwitchAnimeState(1);
 
@@ -145,10 +175,6 @@ public class Player : MoveableObject {
         }
 
         if (collision.gameObject.tag == "Enemy"  || collision.gameObject.tag == "Laser" || collision.gameObject.tag == "CustomEnemy") {
-            if (collision.gameObject.tag == "Laser"
-                && !collision.gameObject.GetComponent<Laser>().isActive())
-                return;
-
             onDeath();
         }
     }
@@ -178,6 +204,7 @@ public class Player : MoveableObject {
 
     public void onPortalEnd()
     {
+        //Debug.Break();
         animator.Play("IdlePlayer");
         teleporting = false;
         stopAnimations = false;
@@ -221,8 +248,8 @@ public class Player : MoveableObject {
                     bodyColliderVer.enabled = true;
                     bodyColliderHor.enabled = false;
 
-                    bodyColliderVer.offset.Set(0.08f, 0.05f);
-                    bodyColliderVer.size.Set(0.2f, 0.3f);
+                    bodyColliderVer.offset.Set(0.02f, 0.05f);
+                    bodyColliderVer.size.Set(0.5f, 0.5f);
                     footCollider.offset.Set(0.08f, 0.01f);
                     break;
 
@@ -232,7 +259,7 @@ public class Player : MoveableObject {
                     bodyColliderHor.enabled = true;
 
                     bodyColliderHor.offset.Set(0f, -0.3f);
-                    bodyColliderHor.size.Set(0.6f, 0.1f);
+                    bodyColliderHor.size.Set(0.72f, 0.18f);
                     footCollider.offset.Set(0f, -0.3213656f);
                     break;
 
@@ -243,8 +270,8 @@ public class Player : MoveableObject {
                         bodyColliderVer.enabled = false;
                         bodyColliderHor.enabled = true;
 
-                        bodyColliderHor.offset.Set(0.1f, -0.1f);
-                        bodyColliderHor.size.Set(0.6f, 0.3f);
+                        bodyColliderHor.offset.Set(0.12f, -0.06f);
+                        bodyColliderHor.size.Set(0.6f, 0.1f);
                         footCollider.offset.Set(0f, -0.3213656f);
 
                     }
@@ -253,8 +280,8 @@ public class Player : MoveableObject {
                         bodyColliderVer.enabled = true;
                         bodyColliderHor.enabled = false;
 
-                        bodyColliderVer.offset.Set(0.05f, 0f);
-                        bodyColliderVer.size.Set(0.3f, 0.5f);
+                        bodyColliderVer.offset.Set(0.06f, 0.05f);
+                        bodyColliderVer.size.Set(0.4f, 0.1f);
                         footCollider.offset.Set(0f, -0.3213656f);
                     }
                     break;
@@ -296,10 +323,15 @@ public class Player : MoveableObject {
 
     public void JumpButtonUp() {
         jumpButton = false;
+        //if(jumpVelocity > 0.01f) {
+            jumpVelocity-= 0.01f;
+        //}
     }
 
     public void JumpButtonDown() {
         jumpButton = true;
+        //if(jumpVelocity < 1.0f)
+            jumpVelocity+= 0.01f;
     }
 
     public void PunchButtonUp() {
